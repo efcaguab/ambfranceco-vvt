@@ -1,0 +1,38 @@
+# A GithubActions workflow that runs the vvt-change.py script daily. It also commits new changes to the repo if there are any
+
+name: vvt-change
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+      - run: pip install -r requirements.txt
+      - run: python vvt-change.py
+      - name: auto-commit-action
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Detected changes in VVT page"
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtppro.zoho.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: Github Actions job result
+          to: fernando@cagua.co
+          from: Github Actions <
+          body: Found a change in the VVT page.
