@@ -1,12 +1,18 @@
-import requests
-import os
 import datetime
 import logging
+import os
+import requests
+import smtplib
+import ssl
+
+from dotenv import load_dotenv
 from retry import retry
-import difflib
+
 
 URL = "https://co.ambafrance.org/VVT"
 HISTORY_PATH = "vvt_history"
+SERVER_ADDRESS = "smtppro.zoho.com"
+SERVER_PORT = 465
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +49,19 @@ def get_latest_page(path):
     return pages[-1]
 
 
+def send_email():
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(SERVER_ADDRESS, SERVER_PORT, context=context) as server:
+        server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+        server.sendmail(
+            from_addr=os.environ["SMTP_USER"],
+            to_addrs=os.environ["SMTP_USER"],
+            msg="Subject: VVT changed\n\nVVT changed",
+        )
+
+
 def main():
+    load_dotenv()
     logger.info("Getting page...")
     page = get_page(URL)
     new_page = os.path.join(HISTORY_PATH, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ".html")
@@ -72,6 +90,9 @@ def main():
     if delete_new_page:
         logger.info("Deleting new page.")
         os.remove(new_page)
+    else:
+        logger.info("Sending email.")
+        send_email()
 
 
 if __name__ == "__main__":
